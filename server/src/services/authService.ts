@@ -221,10 +221,6 @@ export class AuthService {
 
   // CHOOSE ROLE (Self-assign)
   static async chooseRole(userId: string, role: 'usuario' | 'chofer'): Promise<User> {
-    if (role === 'admin') {
-      throw new AppError(400, 'Cannot self-assign admin role', 'CANNOT_ASSIGN_ADMIN');
-    }
-
     const user = await UserRepository.findById(userId);
     if (!user) {
       throw new AppError(404, 'User not found', 'USER_NOT_FOUND');
@@ -233,6 +229,11 @@ export class AuthService {
     // Only allow role assignment if not already completed (role is still 'usuario')
     if (user.role !== 'usuario') {
       throw new AppError(400, 'Role already assigned', 'ROLE_ALREADY_ASSIGNED');
+    }
+
+    // Validate role (only usuario or chofer allowed via self-assign)
+    if (!['usuario', 'chofer'].includes(role)) {
+      throw new AppError(400, 'Invalid role', 'INVALID_ROLE');
     }
 
     // Update role
