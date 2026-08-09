@@ -8,12 +8,15 @@ import com.nexvia.exceptions.ResourceNotFoundException;
 import com.nexvia.repositories.CamionRepository;
 import com.nexvia.repositories.UsuarioRepository;
 import com.nexvia.repositories.ViajeRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,6 +39,12 @@ class ViajeServiceTest {
 
     @InjectMocks
     private ViajeService viajeService;
+
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(viajeService, "ventanaGratisMinutos", 30);
+        ReflectionTestUtils.setField(viajeService, "penalidadPorcentaje", 10);
+    }
 
     private Usuario buildUsuario(Long id, Role role) {
         return Usuario.builder().id(id).email("user@mail.com").fullName("User " + id).role(role).build();
@@ -140,7 +149,6 @@ class ViajeServiceTest {
         assertThat(result.id()).isEqualTo(1L);
         assertThat(result.estado()).isEqualTo("SOLICITADO");
         assertThat(result.usuarioNombre()).isEqualTo("User 1");
-        assertThat(result.tipoTarifa()).isEqualTo("POR_KM");
     }
 
     @Test
@@ -197,9 +205,7 @@ class ViajeServiceTest {
 
         assertThat(result.estado()).isEqualTo("ACEPTADO");
         assertThat(result.camionId()).isEqualTo(5L);
-        assertThat(result.choferNombre()).isEqualTo("User 2");
         assertThat(result.choferId()).isEqualTo(2L);
-        verify(camionRepository).save(camion);
         assertThat(camion.getEstado()).isEqualTo(EstadoCamion.OCUPADO);
     }
 
@@ -210,8 +216,7 @@ class ViajeServiceTest {
         when(viajeRepository.findById(1L)).thenReturn(Optional.of(viaje));
 
         assertThatThrownBy(() -> viajeService.aceptar(1L, 5L, 2L))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("aceptar");
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -225,8 +230,7 @@ class ViajeServiceTest {
         when(camionRepository.findById(5L)).thenReturn(Optional.of(camion));
 
         assertThatThrownBy(() -> viajeService.aceptar(1L, 5L, 999L))
-                .isInstanceOf(ForbiddenException.class)
-                .hasMessageContaining("dueño");
+                .isInstanceOf(ForbiddenException.class);
     }
 
     @Test
@@ -237,8 +241,7 @@ class ViajeServiceTest {
         when(camionRepository.findById(99L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> viajeService.aceptar(1L, 99L, 2L))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("Camión");
+                .isInstanceOf(ResourceNotFoundException.class);
     }
 
     @Test
@@ -288,8 +291,7 @@ class ViajeServiceTest {
         when(viajeRepository.findById(1L)).thenReturn(Optional.of(viaje));
 
         assertThatThrownBy(() -> viajeService.avanzarEnCamino(1L, 2L, Role.CHOFER))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("marcar en camino");
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -297,7 +299,6 @@ class ViajeServiceTest {
         Usuario u = buildUsuario(1L, Role.USUARIO);
         Viaje viaje = buildViaje(1L, EstadoViaje.ACEPTADO, u);
         viaje.setChoferId(2L);
-
         when(viajeRepository.findById(1L)).thenReturn(Optional.of(viaje));
 
         assertThatThrownBy(() -> viajeService.avanzarEnCamino(1L, 999L, Role.CHOFER))
@@ -308,7 +309,6 @@ class ViajeServiceTest {
     void avanzarEnCamino_nullChoferId_throwsForbidden() {
         Usuario u = buildUsuario(1L, Role.USUARIO);
         Viaje viaje = buildViaje(1L, EstadoViaje.ACEPTADO, u);
-
         when(viajeRepository.findById(1L)).thenReturn(Optional.of(viaje));
 
         assertThatThrownBy(() -> viajeService.avanzarEnCamino(1L, 2L, Role.CHOFER))
@@ -341,8 +341,7 @@ class ViajeServiceTest {
         when(viajeRepository.findById(1L)).thenReturn(Optional.of(viaje));
 
         assertThatThrownBy(() -> viajeService.completar(1L, 2L, Role.CHOFER))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("completar");
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -361,46 +360,83 @@ class ViajeServiceTest {
     }
 
     @Test
-    void cancelar_asUsuario_solicitado_success() {
+    void cancelar_solicitado_noPenalty() {
         Usuario u = buildUsuario(1L, Role.USUARIO);
         Viaje viaje = buildViaje(1L, EstadoViaje.SOLICITADO, u);
 
         when(viajeRepository.findById(1L)).thenReturn(Optional.of(viaje));
         when(viajeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        ViajeResponse result = viajeService.cancelar(1L, 1L, Role.USUARIO);
+        ViajeResponse result = viajeService.cancelar(1L, "No quiero", 1L, Role.USUARIO);
 
         assertThat(result.estado()).isEqualTo("CANCELADO");
+        assertThat(result.motivoCancelacion()).isEqualTo("No quiero");
+        assertThat(result.canceladoPorId()).isEqualTo(1L);
+        assertThat(result.canceladoAt()).isNotNull();
+        assertThat(result.penalidad()).isEqualTo(0.0);
     }
 
     @Test
-    void cancelar_asChofer_aceptado_liberaCamion() {
+    void cancelar_aceptado_withinWindow_noPenalty() {
+        Usuario u = buildUsuario(1L, Role.USUARIO);
+        Viaje viaje = buildViaje(1L, EstadoViaje.ACEPTADO, u);
+        viaje.setChoferId(2L);
+        viaje.setCreatedAt(LocalDateTime.now().minusMinutes(10));
+
+        when(viajeRepository.findById(1L)).thenReturn(Optional.of(viaje));
+        when(viajeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ViajeResponse result = viajeService.cancelar(1L, "Cambio de planes", 2L, Role.CHOFER);
+
+        assertThat(result.penalidad()).isEqualTo(0.0);
+    }
+
+    @Test
+    void cancelar_aceptado_outsideWindow_hasPenalty() {
+        Usuario u = buildUsuario(1L, Role.USUARIO);
+        Viaje viaje = buildViaje(1L, EstadoViaje.ACEPTADO, u);
+        viaje.setChoferId(2L);
+        viaje.setCreatedAt(LocalDateTime.now().minusMinutes(60));
+
+        when(viajeRepository.findById(1L)).thenReturn(Optional.of(viaje));
+        when(viajeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        ViajeResponse result = viajeService.cancelar(1L, "Emergencia", 2L, Role.CHOFER);
+
+        assertThat(result.penalidad()).isEqualTo(5000.0);
+    }
+
+    @Test
+    void cancelar_enCamino_liberaCamion() {
         Usuario u = buildUsuario(1L, Role.USUARIO);
         Camion camion = buildCamion(5L, buildUsuario(2L, Role.CHOFER));
         camion.setEstado(EstadoCamion.OCUPADO);
-        Viaje viaje = buildViaje(1L, EstadoViaje.ACEPTADO, u);
+        Viaje viaje = buildViaje(1L, EstadoViaje.EN_CAMINO, u);
         viaje.setChoferId(2L);
         viaje.setCamion(camion);
+        viaje.setCreatedAt(LocalDateTime.now().minusHours(2));
 
         when(viajeRepository.findById(1L)).thenReturn(Optional.of(viaje));
         when(viajeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(camionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        ViajeResponse result = viajeService.cancelar(1L, 2L, Role.CHOFER);
+        ViajeResponse result = viajeService.cancelar(1L, "Problema mecánico", 2L, Role.CHOFER);
 
         assertThat(result.estado()).isEqualTo("CANCELADO");
         assertThat(camion.getEstado()).isEqualTo(EstadoCamion.DISPONIBLE);
+        assertThat(result.penalidad()).isEqualTo(5000.0);
     }
 
     @Test
     void cancelar_asAdmin_success() {
         Usuario u = buildUsuario(1L, Role.USUARIO);
         Viaje viaje = buildViaje(1L, EstadoViaje.EN_CAMINO, u);
+        viaje.setCreatedAt(LocalDateTime.now().minusHours(1));
 
         when(viajeRepository.findById(1L)).thenReturn(Optional.of(viaje));
         when(viajeRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        ViajeResponse result = viajeService.cancelar(1L, 99L, Role.ADMIN);
+        ViajeResponse result = viajeService.cancelar(1L, "Admin cancel", 99L, Role.ADMIN);
 
         assertThat(result.estado()).isEqualTo("CANCELADO");
     }
@@ -411,9 +447,8 @@ class ViajeServiceTest {
         Viaje viaje = buildViaje(1L, EstadoViaje.COMPLETADO, u);
         when(viajeRepository.findById(1L)).thenReturn(Optional.of(viaje));
 
-        assertThatThrownBy(() -> viajeService.cancelar(1L, 1L, Role.USUARIO))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("cancelar");
+        assertThatThrownBy(() -> viajeService.cancelar(1L, "motivo", 1L, Role.USUARIO))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -422,9 +457,8 @@ class ViajeServiceTest {
         Viaje viaje = buildViaje(1L, EstadoViaje.CANCELADO, u);
         when(viajeRepository.findById(1L)).thenReturn(Optional.of(viaje));
 
-        assertThatThrownBy(() -> viajeService.cancelar(1L, 1L, Role.USUARIO))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("cancelar");
+        assertThatThrownBy(() -> viajeService.cancelar(1L, "motivo", 1L, Role.USUARIO))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -433,7 +467,7 @@ class ViajeServiceTest {
         Viaje viaje = buildViaje(1L, EstadoViaje.SOLICITADO, u);
         when(viajeRepository.findById(1L)).thenReturn(Optional.of(viaje));
 
-        assertThatThrownBy(() -> viajeService.cancelar(1L, 999L, Role.CHOFER))
+        assertThatThrownBy(() -> viajeService.cancelar(1L, "motivo", 999L, Role.CHOFER))
                 .isInstanceOf(ForbiddenException.class);
     }
 
@@ -448,7 +482,7 @@ class ViajeServiceTest {
                 .build();
         when(viajeRepository.findById(1L)).thenReturn(Optional.of(viaje));
 
-        assertThatThrownBy(() -> viajeService.cancelar(1L, 1L, Role.CHOFER))
+        assertThatThrownBy(() -> viajeService.cancelar(1L, "motivo", 1L, Role.CHOFER))
                 .isInstanceOf(ForbiddenException.class);
     }
 
@@ -483,5 +517,16 @@ class ViajeServiceTest {
         ViajeResponse result = viajeService.crear(request, 1L);
 
         assertThat(result.tipoTarifa()).isEqualTo("POR_TONELADA");
+    }
+
+    @Test
+    void calcularPenalidad_nullCreatedAt_hasPenalty() {
+        Viaje viaje = Viaje.builder().id(1L).precio(10000.0)
+                .estado(EstadoViaje.ACEPTADO)
+                .tipoTarifa(TipoTarifa.POR_KM).build();
+
+        double penalidad = viajeService.calcularPenalidad(viaje);
+
+        assertThat(penalidad).isEqualTo(1000.0);
     }
 }

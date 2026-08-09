@@ -19,5 +19,9 @@ public record ViajeResponse(
         Long camionId,
         String choferNombre,
         Long choferId,
+        String motivoCancelacion,
+        Long canceladoPorId,
+        LocalDateTime canceladoAt,
+        Double penalidad,
         LocalDateTime createdAt
 ) {}

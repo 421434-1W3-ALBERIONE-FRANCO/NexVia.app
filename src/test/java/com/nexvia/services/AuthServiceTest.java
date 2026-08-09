@@ -1,15 +1,19 @@
 package com.nexvia.services;
 
 import com.nexvia.config.JwtService;
+import com.nexvia.domain.RefreshToken;
 import com.nexvia.domain.Role;
 import com.nexvia.domain.Usuario;
-import com.nexvia.dtos.AuthResponse;
+import com.nexvia.dtos.FullAuthResponse;
 import com.nexvia.dtos.LoginRequest;
 import com.nexvia.dtos.RegisterRequest;
 import com.nexvia.dtos.UsuarioResponse;
 import com.nexvia.exceptions.DuplicateResourceException;
 import com.nexvia.exceptions.ResourceNotFoundException;
+import com.nexvia.exceptions.TokenRefreshException;
+import com.nexvia.repositories.RefreshTokenRepository;
 import com.nexvia.repositories.UsuarioRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -18,7 +22,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,6 +39,9 @@ class AuthServiceTest {
     private UsuarioRepository usuarioRepository;
 
     @Mock
+    private RefreshTokenRepository refreshTokenRepository;
+
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     @Mock
@@ -40,6 +49,15 @@ class AuthServiceTest {
 
     @InjectMocks
     private AuthService authService;
+
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(authService, "refreshExpirationMs", 604800000L);
+    }
+
+    private Usuario buildUsuario(Long id, String email, Role role) {
+        return Usuario.builder().id(id).email(email).password("hashed").fullName("User").role(role).build();
+    }
 
     @Test
     void register_success() {
@@ -53,11 +71,13 @@ class AuthServiceTest {
         });
         when(jwtService.generateToken(1L, "test@mail.com", "USUARIO")).thenReturn("jwt-token");
         when(jwtService.getExpirationMs()).thenReturn(86400000L);
+        when(refreshTokenRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        AuthResponse response = authService.register(request);
+        FullAuthResponse response = authService.register(request);
 
         assertThat(response.token()).isEqualTo("jwt-token");
         assertThat(response.expiresIn()).isEqualTo(86400000L);
+        assertThat(response.refreshToken()).isNotNull();
 
         ArgumentCaptor<Usuario> captor = ArgumentCaptor.forClass(Usuario.class);
         verify(usuarioRepository).save(captor.capture());
@@ -97,8 +117,9 @@ class AuthServiceTest {
         });
         when(jwtService.generateToken(2L, "chofer@mail.com", "CHOFER")).thenReturn("jwt-chofer");
         when(jwtService.getExpirationMs()).thenReturn(86400000L);
+        when(refreshTokenRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        AuthResponse response = authService.register(request);
+        FullAuthResponse response = authService.register(request);
 
         assertThat(response.token()).isEqualTo("jwt-chofer");
     }
@@ -115,8 +136,9 @@ class AuthServiceTest {
         });
         when(jwtService.generateToken(3L, "admin@mail.com", "ADMIN")).thenReturn("jwt-admin");
         when(jwtService.getExpirationMs()).thenReturn(86400000L);
+        when(refreshTokenRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        AuthResponse response = authService.register(request);
+        FullAuthResponse response = authService.register(request);
 
         assertThat(response.token()).isEqualTo("jwt-admin");
     }
@@ -124,15 +146,17 @@ class AuthServiceTest {
     @Test
     void login_success() {
         var request = new LoginRequest("test@mail.com", "123456");
-        var usuario = Usuario.builder().id(1L).email("test@mail.com").password("hashed").fullName("Juan").role(Role.USUARIO).build();
+        var usuario = buildUsuario(1L, "test@mail.com", Role.USUARIO);
         when(usuarioRepository.findByEmail("test@mail.com")).thenReturn(Optional.of(usuario));
         when(passwordEncoder.matches("123456", "hashed")).thenReturn(true);
         when(jwtService.generateToken(1L, "test@mail.com", "USUARIO")).thenReturn("jwt-login");
         when(jwtService.getExpirationMs()).thenReturn(86400000L);
+        when(refreshTokenRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        AuthResponse response = authService.login(request);
+        FullAuthResponse response = authService.login(request);
 
         assertThat(response.token()).isEqualTo("jwt-login");
+        assertThat(response.refreshToken()).isNotNull();
     }
 
     @Test
@@ -147,7 +171,7 @@ class AuthServiceTest {
     @Test
     void login_wrongPassword_throwsBadCredentials() {
         var request = new LoginRequest("test@mail.com", "wrong");
-        var usuario = Usuario.builder().id(1L).email("test@mail.com").password("hashed").fullName("Juan").role(Role.USUARIO).build();
+        var usuario = buildUsuario(1L, "test@mail.com", Role.USUARIO);
         when(usuarioRepository.findByEmail("test@mail.com")).thenReturn(Optional.of(usuario));
         when(passwordEncoder.matches("wrong", "hashed")).thenReturn(false);
 
@@ -156,8 +180,55 @@ class AuthServiceTest {
     }
 
     @Test
+    void refresh_success() {
+        var usuario = buildUsuario(1L, "test@mail.com", Role.USUARIO);
+        var rt = RefreshToken.builder().id(1L).token("valid-rt").usuario(usuario)
+                .expiryDate(Instant.now().plusSeconds(3600)).build();
+
+        when(refreshTokenRepository.findByToken("valid-rt")).thenReturn(Optional.of(rt));
+        when(jwtService.generateToken(1L, "test@mail.com", "USUARIO")).thenReturn("new-jwt");
+        when(jwtService.getExpirationMs()).thenReturn(86400000L);
+        when(refreshTokenRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        FullAuthResponse response = authService.refresh("valid-rt");
+
+        assertThat(response.token()).isEqualTo("new-jwt");
+        verify(refreshTokenRepository).delete(rt);
+    }
+
+    @Test
+    void refresh_invalidToken_throws() {
+        when(refreshTokenRepository.findByToken("bad")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.refresh("bad"))
+                .isInstanceOf(TokenRefreshException.class)
+                .hasMessageContaining("inválido");
+    }
+
+    @Test
+    void refresh_expiredToken_throws() {
+        var usuario = buildUsuario(1L, "test@mail.com", Role.USUARIO);
+        var rt = RefreshToken.builder().id(1L).token("expired-rt").usuario(usuario)
+                .expiryDate(Instant.now().minusSeconds(3600)).build();
+
+        when(refreshTokenRepository.findByToken("expired-rt")).thenReturn(Optional.of(rt));
+
+        assertThatThrownBy(() -> authService.refresh("expired-rt"))
+                .isInstanceOf(TokenRefreshException.class)
+                .hasMessageContaining("expirado");
+        verify(refreshTokenRepository).delete(rt);
+    }
+
+    @Test
+    void logout_success() {
+        authService.logout(1L);
+        verify(refreshTokenRepository).deleteByUsuarioId(1L);
+    }
+
+    @Test
     void me_success() {
-        var usuario = Usuario.builder().id(1L).email("test@mail.com").fullName("Juan").role(Role.USUARIO).build();
+        var usuario = buildUsuario(1L, "test@mail.com", Role.USUARIO);
+        usuario.setFullName("Juan");
         when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
 
         UsuarioResponse response = authService.me(1L);

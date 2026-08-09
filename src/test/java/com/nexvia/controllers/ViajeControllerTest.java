@@ -2,6 +2,7 @@ package com.nexvia.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nexvia.config.JwtService;
+import com.nexvia.dtos.CancelacionRequest;
 import com.nexvia.dtos.ViajeRequest;
 import com.nexvia.dtos.ViajeResponse;
 import com.nexvia.exceptions.ForbiddenException;
@@ -49,7 +50,9 @@ class ViajeControllerTest {
     private final ViajeResponse sampleResponse = new ViajeResponse(
             1L, -32.0, -63.0, -34.0, -58.0, 400.0, 10.0,
             "POR_KM", 50000.0, "Soja", "SOLICITADO",
-            1L, "User 1", null, null, null, LocalDateTime.of(2025, 1, 1, 12, 0)
+            1L, "User 1", null, null, null,
+            null, null, null, 0.0,
+            LocalDateTime.of(2025, 1, 1, 12, 0)
     );
 
     private UsernamePasswordAuthenticationToken userAuth() {
@@ -181,6 +184,7 @@ class ViajeControllerTest {
     void aceptar_returns200() throws Exception {
         var accepted = new ViajeResponse(1L, -32.0, -63.0, -34.0, -58.0, 400.0, 10.0,
                 "POR_KM", 50000.0, "Soja", "ACEPTADO", 1L, "User 1", 5L, "Chofer", 2L,
+                null, null, null, 0.0,
                 LocalDateTime.of(2025, 1, 1, 12, 0));
         when(viajeService.aceptar(1L, 5L, 2L)).thenReturn(accepted);
 
@@ -207,6 +211,7 @@ class ViajeControllerTest {
     void enCamino_returns200() throws Exception {
         var enCamino = new ViajeResponse(1L, -32.0, -63.0, -34.0, -58.0, 400.0, 10.0,
                 "POR_KM", 50000.0, "Soja", "EN_CAMINO", 1L, "User 1", 5L, "Chofer", 2L,
+                null, null, null, 0.0,
                 LocalDateTime.of(2025, 1, 1, 12, 0));
         when(viajeService.avanzarEnCamino(eq(1L), eq(2L), any())).thenReturn(enCamino);
 
@@ -228,6 +233,7 @@ class ViajeControllerTest {
     void completar_returns200() throws Exception {
         var completado = new ViajeResponse(1L, -32.0, -63.0, -34.0, -58.0, 400.0, 10.0,
                 "POR_KM", 50000.0, "Soja", "COMPLETADO", 1L, "User 1", 5L, "Chofer", 2L,
+                null, null, null, 0.0,
                 LocalDateTime.of(2025, 1, 1, 12, 0));
         when(viajeService.completar(eq(1L), eq(2L), any())).thenReturn(completado);
 
@@ -240,20 +246,44 @@ class ViajeControllerTest {
     void cancelar_returns200() throws Exception {
         var cancelado = new ViajeResponse(1L, -32.0, -63.0, -34.0, -58.0, 400.0, 10.0,
                 "POR_KM", 50000.0, "Soja", "CANCELADO", 1L, "User 1", null, null, null,
+                "No quiero", 1L, LocalDateTime.of(2025, 1, 1, 12, 30), 0.0,
                 LocalDateTime.of(2025, 1, 1, 12, 0));
-        when(viajeService.cancelar(eq(1L), eq(1L), any())).thenReturn(cancelado);
+        when(viajeService.cancelar(eq(1L), eq("No quiero"), eq(1L), any())).thenReturn(cancelado);
 
-        mockMvc.perform(patch("/api/v1/viajes/1/cancelar").principal(userAuth()))
+        var cancelRequest = new CancelacionRequest("No quiero");
+
+        mockMvc.perform(patch("/api/v1/viajes/1/cancelar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(cancelRequest))
+                        .principal(userAuth()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.estado").value("CANCELADO"));
+                .andExpect(jsonPath("$.estado").value("CANCELADO"))
+                .andExpect(jsonPath("$.motivoCancelacion").value("No quiero"))
+                .andExpect(jsonPath("$.penalidad").value(0.0));
     }
 
     @Test
     void cancelar_forbidden_returns403() throws Exception {
-        when(viajeService.cancelar(eq(1L), eq(1L), any()))
+        when(viajeService.cancelar(eq(1L), eq("motivo"), eq(1L), any()))
                 .thenThrow(new ForbiddenException("No tenés permiso"));
 
-        mockMvc.perform(patch("/api/v1/viajes/1/cancelar").principal(userAuth()))
+        var cancelRequest = new CancelacionRequest("motivo");
+
+        mockMvc.perform(patch("/api/v1/viajes/1/cancelar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(cancelRequest))
+                        .principal(userAuth()))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void cancelar_blankMotivo_returns400() throws Exception {
+        var cancelRequest = new CancelacionRequest("");
+
+        mockMvc.perform(patch("/api/v1/viajes/1/cancelar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(cancelRequest))
+                        .principal(userAuth()))
+                .andExpect(status().isBadRequest());
     }
 }

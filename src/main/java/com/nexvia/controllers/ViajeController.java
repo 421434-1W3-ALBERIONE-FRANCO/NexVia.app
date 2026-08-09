@@ -2,6 +2,7 @@ package com.nexvia.controllers;
 
 import com.nexvia.domain.EstadoViaje;
 import com.nexvia.domain.Role;
+import com.nexvia.dtos.CancelacionRequest;
 import com.nexvia.dtos.ViajeRequest;
 import com.nexvia.dtos.ViajeResponse;
 import com.nexvia.services.ViajeService;
@@ -83,10 +84,11 @@ public class ViajeController {
 
     @PatchMapping("/{id}/cancelar")
     public ResponseEntity<ViajeResponse> cancelar(@PathVariable Long id,
+                                                   @Valid @RequestBody CancelacionRequest request,
                                                    Authentication authentication) {
         Long userId = (Long) authentication.getPrincipal();
         Role role = extractRole(authentication);
-        return ResponseEntity.ok(viajeService.cancelar(id, userId, role));
+        return ResponseEntity.ok(viajeService.cancelar(id, request.motivo(), userId, role));
     }
 
     private Role extractRole(Authentication authentication) {

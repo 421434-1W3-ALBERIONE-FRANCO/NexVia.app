@@ -9,9 +9,11 @@ import com.nexvia.repositories.CamionRepository;
 import com.nexvia.repositories.UsuarioRepository;
 import com.nexvia.repositories.ViajeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -21,6 +23,12 @@ public class ViajeService {
     private final ViajeRepository viajeRepository;
     private final UsuarioRepository usuarioRepository;
     private final CamionRepository camionRepository;
+
+    @Value("${nexvia.cancelacion.ventana-gratis-minutos:30}")
+    private int ventanaGratisMinutos;
+
+    @Value("${nexvia.cancelacion.penalidad-porcentaje:10}")
+    private int penalidadPorcentaje;
 
     public List<ViajeResponse> listar() {
         return viajeRepository.findAll().stream().map(this::toResponse).toList();
@@ -122,7 +130,7 @@ public class ViajeService {
     }
 
     @Transactional
-    public ViajeResponse cancelar(Long viajeId, Long userId, Role userRole) {
+    public ViajeResponse cancelar(Long viajeId, String motivo, Long userId, Role userRole) {
         Viaje viaje = findOrThrow(viajeId);
 
         if (viaje.getEstado() == EstadoViaje.COMPLETADO || viaje.getEstado() == EstadoViaje.CANCELADO) {
@@ -131,7 +139,13 @@ public class ViajeService {
 
         checkParticipanteOrAdmin(viaje, userId, userRole);
 
+        double penalidad = calcularPenalidad(viaje);
+
         viaje.setEstado(EstadoViaje.CANCELADO);
+        viaje.setMotivoCancelacion(motivo);
+        viaje.setCanceladoPorId(userId);
+        viaje.setCanceladoAt(LocalDateTime.now());
+        viaje.setPenalidad(penalidad);
 
         if (viaje.getCamion() != null) {
             Camion camion = viaje.getCamion();
@@ -140,6 +154,19 @@ public class ViajeService {
         }
 
         return toResponse(viajeRepository.save(viaje));
+    }
+
+    double calcularPenalidad(Viaje viaje) {
+        if (viaje.getEstado() == EstadoViaje.SOLICITADO) {
+            return 0.0;
+        }
+        if (viaje.getCreatedAt() != null) {
+            LocalDateTime limite = viaje.getCreatedAt().plusMinutes(ventanaGratisMinutos);
+            if (LocalDateTime.now().isBefore(limite)) {
+                return 0.0;
+            }
+        }
+        return Math.round(viaje.getPrecio() * penalidadPorcentaje / 100.0 * 100.0) / 100.0;
     }
 
     private Viaje findOrThrow(Long id) {
@@ -198,6 +225,10 @@ public class ViajeService {
                 viaje.getCamion() != null ? viaje.getCamion().getId() : null,
                 viaje.getChoferNombre(),
                 viaje.getChoferId(),
+                viaje.getMotivoCancelacion(),
+                viaje.getCanceladoPorId(),
+                viaje.getCanceladoAt(),
+                viaje.getPenalidad(),
                 viaje.getCreatedAt()
         );
     }

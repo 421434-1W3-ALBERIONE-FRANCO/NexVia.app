@@ -1,7 +1,8 @@
 package com.nexvia.controllers;
 
-import com.nexvia.dtos.AuthResponse;
+import com.nexvia.dtos.FullAuthResponse;
 import com.nexvia.dtos.LoginRequest;
+import com.nexvia.dtos.RefreshTokenRequest;
 import com.nexvia.dtos.RegisterRequest;
 import com.nexvia.dtos.UsuarioResponse;
 import com.nexvia.services.AuthService;
@@ -20,13 +21,25 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<FullAuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<FullAuthResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<FullAuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ResponseEntity.ok(authService.refresh(request.refreshToken()));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(Authentication authentication) {
+        Long userId = (Long) authentication.getPrincipal();
+        authService.logout(userId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/me")

@@ -67,6 +67,19 @@ public class Viaje {
     @Column(name = "chofer_id")
     private Long choferId;
 
+    @Column(name = "motivo_cancelacion")
+    private String motivoCancelacion;
+
+    @Column(name = "cancelado_por_id")
+    private Long canceladoPorId;
+
+    @Column(name = "cancelado_at")
+    private LocalDateTime canceladoAt;
+
+    @Column(name = "penalidad")
+    @Builder.Default
+    private Double penalidad = 0.0;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
