@@ -9,6 +9,7 @@ import ScrollToTop from './components/ScrollToTop';
 // Add page imports here
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Layout from '@/components/Layout';
+import Landing from '@/pages/Landing';
 import Bienvenida from '@/pages/Bienvenida';
 import Home from '@/pages/Home';
 import Admin from '@/pages/Admin';
@@ -44,15 +45,19 @@ const AuthenticatedApp = () => {
   // Render the main app
   return (
     <Routes>
+      {/* Public routes */}
+      <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+
+      {/* Protected routes */}
       <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
         <Route path="/bienvenida" element={<Bienvenida />} />
         <Route element={<Layout />}>
           <Route element={<ProtectedRoute allowedRoles={['usuario']} unauthenticatedElement={<Navigate to="/login" replace />} />}>
-            <Route path="/" element={<Home />} />
+            <Route path="/home" element={<Home />} />
           </Route>
           <Route element={<ProtectedRoute allowedRoles={['admin']} unauthenticatedElement={<Navigate to="/login" replace />} />}>
             <Route path="/admin" element={<Admin />} />
@@ -62,6 +67,8 @@ const AuthenticatedApp = () => {
           </Route>
         </Route>
       </Route>
+
+      {/* 404 */}
       <Route path="*" element={<PageNotFound />} />
     </Routes>
   );
