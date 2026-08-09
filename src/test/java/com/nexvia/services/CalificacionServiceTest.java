@@ -32,6 +32,9 @@ class CalificacionServiceTest {
     @Mock
     private ViajeRepository viajeRepository;
 
+    @Mock
+    private NotificacionService notificacionService;
+
     @InjectMocks
     private CalificacionService calificacionService;
 

@@ -1,8 +1,6 @@
 package com.nexvia.services;
 
-import com.nexvia.domain.Calificacion;
-import com.nexvia.domain.EstadoViaje;
-import com.nexvia.domain.Viaje;
+import com.nexvia.domain.*;
 import com.nexvia.dtos.CalificacionRequest;
 import com.nexvia.dtos.CalificacionResponse;
 import com.nexvia.dtos.PromedioCalificacionResponse;
@@ -21,6 +19,7 @@ public class CalificacionService {
 
     private final CalificacionRepository calificacionRepository;
     private final ViajeRepository viajeRepository;
+    private final NotificacionService notificacionService;
 
     public CalificacionResponse crear(CalificacionRequest request, Long autorId) {
         Viaje viaje = viajeRepository.findById(request.viajeId())
@@ -53,7 +52,14 @@ public class CalificacionService {
                 .comentario(request.comentario())
                 .build();
 
-        return toResponse(calificacionRepository.save(calificacion));
+        Calificacion saved = calificacionRepository.save(calificacion);
+
+        notificacionService.crearNotificacion(
+                TipoNotificacion.CALIFICACION_RECIBIDA,
+                "Recibiste una calificación de " + saved.getPuntuacion() + " estrellas en el viaje #" + request.viajeId(),
+                request.destinatarioId(), request.viajeId());
+
+        return toResponse(saved);
     }
 
     public List<CalificacionResponse> obtenerPorDestinatario(Long destinatarioId) {

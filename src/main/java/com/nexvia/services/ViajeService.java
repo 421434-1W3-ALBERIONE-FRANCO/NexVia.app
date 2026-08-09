@@ -23,6 +23,7 @@ public class ViajeService {
     private final ViajeRepository viajeRepository;
     private final UsuarioRepository usuarioRepository;
     private final CamionRepository camionRepository;
+    private final NotificacionService notificacionService;
 
     @Value("${nexvia.cancelacion.ventana-gratis-minutos:30}")
     private int ventanaGratisMinutos;
@@ -99,7 +100,16 @@ public class ViajeService {
         camion.setEstado(EstadoCamion.OCUPADO);
         camionRepository.save(camion);
 
-        return toResponse(viajeRepository.save(viaje));
+        Viaje saved = viajeRepository.save(viaje);
+
+        if (saved.getUsuario() != null) {
+            notificacionService.crearNotificacion(
+                    TipoNotificacion.VIAJE_ACEPTADO,
+                    "Tu viaje #" + saved.getId() + " fue aceptado por " + chofer.getFullName(),
+                    saved.getUsuario().getId(), saved.getId());
+        }
+
+        return toResponse(saved);
     }
 
     @Transactional
@@ -109,7 +119,16 @@ public class ViajeService {
         checkChoferOrAdmin(viaje, userId, userRole);
 
         viaje.setEstado(EstadoViaje.EN_CAMINO);
-        return toResponse(viajeRepository.save(viaje));
+        Viaje saved = viajeRepository.save(viaje);
+
+        if (saved.getUsuario() != null) {
+            notificacionService.crearNotificacion(
+                    TipoNotificacion.VIAJE_EN_CAMINO,
+                    "Tu viaje #" + saved.getId() + " está en camino",
+                    saved.getUsuario().getId(), saved.getId());
+        }
+
+        return toResponse(saved);
     }
 
     @Transactional
@@ -126,7 +145,22 @@ public class ViajeService {
             camionRepository.save(camion);
         }
 
-        return toResponse(viajeRepository.save(viaje));
+        Viaje saved = viajeRepository.save(viaje);
+
+        if (saved.getUsuario() != null) {
+            notificacionService.crearNotificacion(
+                    TipoNotificacion.VIAJE_COMPLETADO,
+                    "Tu viaje #" + saved.getId() + " fue completado",
+                    saved.getUsuario().getId(), saved.getId());
+        }
+        if (saved.getChoferId() != null) {
+            notificacionService.crearNotificacion(
+                    TipoNotificacion.VIAJE_COMPLETADO,
+                    "El viaje #" + saved.getId() + " fue completado",
+                    saved.getChoferId(), saved.getId());
+        }
+
+        return toResponse(saved);
     }
 
     @Transactional
@@ -153,7 +187,22 @@ public class ViajeService {
             camionRepository.save(camion);
         }
 
-        return toResponse(viajeRepository.save(viaje));
+        Viaje saved = viajeRepository.save(viaje);
+
+        if (saved.getUsuario() != null && !saved.getUsuario().getId().equals(userId)) {
+            notificacionService.crearNotificacion(
+                    TipoNotificacion.VIAJE_CANCELADO,
+                    "El viaje #" + saved.getId() + " fue cancelado: " + motivo,
+                    saved.getUsuario().getId(), saved.getId());
+        }
+        if (saved.getChoferId() != null && !saved.getChoferId().equals(userId)) {
+            notificacionService.crearNotificacion(
+                    TipoNotificacion.VIAJE_CANCELADO,
+                    "El viaje #" + saved.getId() + " fue cancelado: " + motivo,
+                    saved.getChoferId(), saved.getId());
+        }
+
+        return toResponse(saved);
     }
 
     double calcularPenalidad(Viaje viaje) {

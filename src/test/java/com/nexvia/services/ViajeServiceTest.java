@@ -37,6 +37,9 @@ class ViajeServiceTest {
     @Mock
     private CamionRepository camionRepository;
 
+    @Mock
+    private NotificacionService notificacionService;
+
     @InjectMocks
     private ViajeService viajeService;
 
