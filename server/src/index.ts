@@ -1,10 +1,12 @@
 import express, { Request, Response } from 'express';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { config } from './config/env';
 import { corsMiddleware } from './middleware/cors';
 import { errorHandler } from './middleware/errorHandler';
 import { apiRateLimit } from './middleware/rateLimit';
 import { initRedis } from './config/redis';
+import authRoutes from './routes/auth';
 
 const app = express();
 
@@ -14,6 +16,7 @@ app.use(helmet());
 // Middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(cookieParser());
 app.use(corsMiddleware);
 
 // Client IP
@@ -45,13 +48,13 @@ app.get('/api/v1/health', (req: Request, res: Response) => {
   });
 });
 
-// API Routes (to be added in subsequent phases)
-// import authRoutes from './routes/auth';
+// API Routes
+app.use('/api/v1/auth', authRoutes);
+
+// Rutas futuras (FASE 3+)
 // import viajesRoutes from './routes/viajes';
 // import camionesRoutes from './routes/camiones';
 // import adminRoutes from './routes/admin';
-
-// app.use('/api/v1/auth', authRoutes);
 // app.use('/api/v1/viajes', viajesRoutes);
 // app.use('/api/v1/camiones', camionesRoutes);
 // app.use('/api/v1/admin', adminRoutes);
