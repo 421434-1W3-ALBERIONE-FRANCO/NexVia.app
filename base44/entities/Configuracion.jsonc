@@ -1,0 +1,42 @@
+{
+  "name": "Configuracion",
+  "type": "object",
+  "properties": {
+    "tarifa_por_km": {
+      "type": "number"
+    },
+    "tarifa_por_tonelada": {
+      "type": "number"
+    },
+    "zona_nombre": {
+      "type": "string"
+    },
+    "centro_lat": {
+      "type": "number"
+    },
+    "centro_lng": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "tarifa_por_km"
+  ],
+  "rls": {
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": true,
+    "update": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

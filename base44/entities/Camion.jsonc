@@ -1,0 +1,73 @@
+{
+  "name": "Camion",
+  "type": "object",
+  "properties": {
+    "transporte_nombre": {
+      "type": "string"
+    },
+    "transporte_cuit": {
+      "type": "string"
+    },
+    "chofer_nombre": {
+      "type": "string"
+    },
+    "chofer_cuit": {
+      "type": "string"
+    },
+    "patente": {
+      "type": "string"
+    },
+    "patente_acoplado": {
+      "type": "string"
+    },
+    "telefono": {
+      "type": "string"
+    },
+    "capacidad_kg": {
+      "type": "number"
+    },
+    "lat": {
+      "type": "number"
+    },
+    "lng": {
+      "type": "number"
+    },
+    "estado": {
+      "type": "string",
+      "enum": [
+        "disponible",
+        "ocupado",
+        "inactivo"
+      ],
+      "default": "disponible"
+    },
+    "user_id": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "chofer_nombre",
+    "patente"
+  ],
+  "rls": {
+    "create": true,
+    "read": true,
+    "update": {
+      "$or": [
+        {
+          "data.user_id": "{{user.id}}"
+        },
+        {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      ]
+    },
+    "delete": {
+      "user_condition": {
+        "role": "admin"
+      }
+    }
+  }
+}

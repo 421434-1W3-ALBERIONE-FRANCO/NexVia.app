@@ -1,0 +1,42 @@
+{
+  "name": "LugarGuardado",
+  "type": "object",
+  "properties": {
+    "nombre": {
+      "type": "string"
+    },
+    "lat": {
+      "type": "number"
+    },
+    "lng": {
+      "type": "number"
+    },
+    "tipo": {
+      "type": "string",
+      "enum": [
+        "pueblo",
+        "hacienda",
+        "campo",
+        "otro"
+      ],
+      "default": "otro"
+    }
+  },
+  "required": [
+    "nombre",
+    "lat",
+    "lng"
+  ],
+  "rls": {
+    "create": true,
+    "read": {
+      "created_by": "{{user.id}}"
+    },
+    "update": {
+      "created_by": "{{user.id}}"
+    },
+    "delete": {
+      "created_by": "{{user.id}}"
+    }
+  }
+}
