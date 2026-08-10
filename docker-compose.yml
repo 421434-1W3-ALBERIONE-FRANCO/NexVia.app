@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: nexvia_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nexvia_db
+      POSTGRES_USER: nexvia_user
+      POSTGRES_PASSWORD: nexvia_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - nexvia_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexvia_user -d nexvia_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexvia_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  nexvia_pgdata:

@@ -12,15 +12,25 @@ nexvia/
 └── back/    # Backend Express + PostgreSQL + TypeScript
 ```
 
+## Infraestructura local (Docker)
+
+Levantá PostgreSQL (host `5433`) y Redis (`6379`) con:
+
+```bash
+docker compose up -d
+```
+
 ## Backend (`back/`)
 
 API REST en `Express + TypeScript`, sesiones por cookie, PostgreSQL.
 
 ```bash
 cd back
+cp .env.example .env   # ya alineado con docker-compose
 npm install
-npm run migrate   # aplicar migraciones
-npm run dev       # http://localhost:3000  (API en /api/v1)
+npm run migrate        # aplicar migraciones
+npm run seed           # (opcional) datos de ejemplo
+npm run dev            # http://localhost:3000  (API en /api/v1)
 ```
 
 ## Frontend (`front/`)
