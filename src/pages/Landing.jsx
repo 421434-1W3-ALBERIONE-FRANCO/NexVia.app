@@ -1,14 +1,48 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
-import TruckViewer3D from '@/components/TruckViewer3D';
+import TruckWireframeBackground from '@/components/TruckWireframeBackground';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, MapPin, TrendingUp, Shield, Zap, Users, Globe } from 'lucide-react';
+import { ArrowRight, MapPin, TrendingUp, Shield, Zap, Users, Globe, ChevronDown } from 'lucide-react';
+
+const FEATURES = [
+  {
+    icon: MapPin,
+    title: 'Geolocalización en Tiempo Real',
+    desc: 'Rastreo exacto de camiones y rutas optimizadas automáticamente.'
+  },
+  {
+    icon: TrendingUp,
+    title: 'Precios Dinámicos',
+    desc: 'Cálculo automático basado en distancia, peso y tarifa actual.'
+  },
+  {
+    icon: Shield,
+    title: 'Seguridad Garantizada',
+    desc: 'Autenticación de 2FA, auditoría completa de transacciones.'
+  },
+  {
+    icon: Zap,
+    title: 'Instant Matching',
+    desc: 'Conecta usuarios y choferes en segundos usando IA.'
+  },
+  {
+    icon: Users,
+    title: 'Comunidad Confiable',
+    desc: 'Sistema de ratings y reseñas verificadas.'
+  },
+  {
+    icon: Globe,
+    title: 'Disponible 24/7',
+    desc: 'Plataforma siempre activa con soporte inmediato.'
+  }
+];
 
 export default function Landing() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [isScrolled, setIsScrolled] = useState(false);
+  const [currentFeature, setCurrentFeature] = useState(0);
+  const containerRef = useRef(null);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -19,50 +53,56 @@ export default function Landing() {
     }
   }, [user, navigate]);
 
+  // Carousel auto-advance
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 50);
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    const timer = setInterval(() => {
+      setCurrentFeature((prev) => (prev + 1) % FEATURES.length);
+    }, 3000);
+    return () => clearInterval(timer);
   }, []);
 
+  const currentFeatureData = FEATURES[currentFeature];
+  const FeatureIcon = currentFeatureData.icon;
+
   return (
-    <div className="w-full overflow-x-hidden bg-slate-950">
+    <div className="w-full overflow-x-hidden bg-gradient-to-b from-gray-950 via-blue-950 to-gray-950" ref={containerRef}>
       {/* Navigation */}
-      <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          isScrolled ? 'bg-slate-950/80 backdrop-blur-md border-b border-blue-500/20' : 'bg-transparent'
-        }`}
-      >
+      <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-md bg-gradient-to-b from-gray-950/80 to-transparent border-b border-cyan-500/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">NX</span>
+          {/* Responsive Logo */}
+          <div className="flex items-center gap-1 sm:gap-2 group cursor-pointer" onClick={() => navigate('/')}>
+            <div className="w-6 sm:w-8 h-6 sm:h-8 bg-gradient-to-br from-cyan-400 via-blue-500 to-blue-900 rounded-lg flex items-center justify-center transform group-hover:scale-110 transition-transform">
+              <span className="text-white font-bold text-xs sm:text-sm">NX</span>
             </div>
-            <span className="text-xl font-bold text-white">NEXVIA</span>
+            <div className="flex flex-col leading-tight">
+              <span className="text-sm sm:text-lg font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
+                NEX
+              </span>
+              <span className="text-xs sm:text-sm font-bold text-blue-400">VIA</span>
+            </div>
           </div>
 
           <div className="hidden md:flex items-center gap-8">
-            <a href="#features" className="text-slate-300 hover:text-white transition">
-              Features
+            <a href="#carousel" className="text-slate-300 hover:text-cyan-400 transition">
+              Características
             </a>
-            <a href="#benefits" className="text-slate-300 hover:text-white transition">
-              Beneficios
-            </a>
-            <a href="#pricing" className="text-slate-300 hover:text-white transition">
-              Precios
+            <a href="#cta" className="text-slate-300 hover:text-cyan-400 transition">
+              Comenzar
             </a>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Button
               variant="outline"
-              className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
+              size="sm"
+              className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10 text-xs sm:text-sm"
               onClick={() => navigate('/login')}
             >
               Ingresar
             </Button>
             <Button
-              className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+              size="sm"
+              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-xs sm:text-sm"
               onClick={() => navigate('/register')}
             >
               Registrarse
@@ -71,178 +111,165 @@ export default function Landing() {
         </div>
       </nav>
 
-      {/* Hero Section with 3D Truck */}
-      <section className="relative min-h-screen pt-20 pb-20 flex items-center justify-center overflow-hidden">
-        {/* Background elements */}
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-500/10 via-transparent to-transparent" />
-        <div className="absolute top-20 right-10 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 left-10 w-72 h-72 bg-cyan-500/20 rounded-full blur-3xl" />
+      {/* Hero Section */}
+      <section className="relative min-h-screen pt-32 pb-10 px-4 sm:px-6 overflow-hidden">
+        {/* 3D Wireframe Truck Background */}
+        <TruckWireframeBackground />
 
-        <div className="relative z-10 w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center px-4 sm:px-6 lg:px-8">
-          {/* Left content */}
-          <div className="space-y-8">
-            <div className="space-y-4">
-              <div className="inline-block px-4 py-2 rounded-lg bg-blue-500/20 border border-blue-500/50">
-                <span className="text-sm font-medium text-blue-300">Bienvenido a NEXVIA</span>
-              </div>
-              <h1 className="text-5xl md:text-6xl font-bold leading-tight">
-                <span className="text-white">Conectamos</span>
-                <br />
-                <span className="bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-400 bg-clip-text text-transparent">
-                  carga, impulsamos
-                </span>
-                <br />
-                <span className="text-white">el futuro</span>
-              </h1>
-              <p className="text-lg text-slate-400 max-w-md">
-                Plataforma de transporte de cargas 100% digital. Conecta usuarios y choferes en tiempo real.
-              </p>
+        <div className="relative z-10 text-center space-y-8 max-w-4xl mx-auto">
+          {/* Responsive Title */}
+          <div className="space-y-4">
+            <div className="inline-block px-3 sm:px-4 py-2 rounded-lg bg-cyan-500/20 border border-cyan-500/50">
+              <span className="text-xs sm:text-sm font-medium text-cyan-300">Bienvenido a NEXVIA</span>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white text-base"
-                onClick={() => navigate('/register')}
-              >
-                Comenzar Gratis <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
-                onClick={() => document.getElementById('features').scrollIntoView({ behavior: 'smooth' })}
-              >
-                Saber Más
-              </Button>
-            </div>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight space-y-2 sm:space-y-3">
+              <div className="text-white">Conectamos</div>
+              <div className="bg-gradient-to-r from-cyan-400 via-blue-500 to-green-500 bg-clip-text text-transparent">
+                carga impulsamos
+              </div>
+              <div className="text-white">el futuro</div>
+            </h1>
 
-            <div className="grid grid-cols-3 gap-4 pt-8 border-t border-slate-800">
-              <div>
-                <p className="text-2xl font-bold text-white">500+</p>
-                <p className="text-sm text-slate-400">Usuarios activos</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-white">1000+</p>
-                <p className="text-sm text-slate-400">Viajes completados</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-white">24/7</p>
-                <p className="text-sm text-slate-400">Soporte disponible</p>
-              </div>
+            <p className="text-base sm:text-lg text-slate-400 max-w-2xl mx-auto">
+              Plataforma de transporte 100% digital
+            </p>
+          </div>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
+            <Button
+              size="lg"
+              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white w-full sm:w-auto"
+              onClick={() => navigate('/register')}
+            >
+              Comenzar Gratis <ArrowRight className="ml-2 w-4 h-4" />
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10 w-full sm:w-auto"
+              onClick={() => document.getElementById('carousel').scrollIntoView({ behavior: 'smooth' })}
+            >
+              Ver Características
+            </Button>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-3 sm:gap-6 pt-6 sm:pt-8 border-t border-blue-900/50">
+            <div>
+              <p className="text-xl sm:text-2xl font-bold text-cyan-400">500+</p>
+              <p className="text-xs sm:text-sm text-slate-400">Usuarios</p>
+            </div>
+            <div>
+              <p className="text-xl sm:text-2xl font-bold text-cyan-400">1000+</p>
+              <p className="text-xs sm:text-sm text-slate-400">Viajes</p>
+            </div>
+            <div>
+              <p className="text-xl sm:text-2xl font-bold text-cyan-400">24/7</p>
+              <p className="text-xs sm:text-sm text-slate-400">Soporte</p>
             </div>
           </div>
 
-          {/* Right 3D viewer */}
-          <div className="h-96 md:h-[500px] lg:h-[600px] rounded-2xl overflow-hidden border border-blue-500/30 shadow-2xl shadow-blue-500/20 bg-slate-900">
-            <TruckViewer3D />
+          {/* Scroll indicator */}
+          <div className="pt-8 sm:pt-12 animate-bounce">
+            <ChevronDown className="w-6 h-6 text-cyan-400 mx-auto" />
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="relative py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-white">Características Principales</h2>
-            <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-              Herramientas modernas diseñadas para simplificar la logística de carga
+      {/* Features Carousel */}
+      <section id="carousel" className="relative py-16 sm:py-20 px-4 sm:px-6">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-12 sm:mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-2">Características</h2>
+            <p className="text-sm sm:text-base text-slate-400">
+              Herramientas diseñadas para simplificar tu logística ({currentFeature + 1}/{FEATURES.length})
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Feature 1 */}
-            <div className="group p-8 rounded-xl border border-slate-800 bg-gradient-to-br from-slate-900/50 to-slate-800/20 hover:border-blue-500/50 transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition">
-                <MapPin className="w-6 h-6 text-white" />
+          {/* Carousel Card */}
+          <div className="relative h-80 sm:h-96 rounded-2xl border border-cyan-500/30 bg-gradient-to-br from-blue-950/50 to-cyan-950/30 overflow-hidden group">
+            {/* Animated background */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-cyan-500/10 to-transparent animate-pulse" />
+
+            {/* Card content */}
+            <div className="relative z-10 h-full flex flex-col items-center justify-center text-center p-6 sm:p-8">
+              <div className="w-16 sm:w-20 h-16 sm:h-20 bg-gradient-to-br from-cyan-400 to-blue-600 rounded-2xl flex items-center justify-center mb-6 sm:mb-8 group-hover:scale-110 transition-transform duration-300">
+                <FeatureIcon className="w-8 sm:w-10 h-8 sm:h-10 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Geolocalización en Tiempo Real</h3>
-              <p className="text-slate-400">Rastreo exacto de camiones y rutas optimizadas automáticamente.</p>
+
+              <h3 className="text-2xl sm:text-3xl font-bold text-white mb-3 sm:mb-4">
+                {currentFeatureData.title}
+              </h3>
+
+              <p className="text-base sm:text-lg text-slate-300 max-w-xl">
+                {currentFeatureData.desc}
+              </p>
             </div>
 
-            {/* Feature 2 */}
-            <div className="group p-8 rounded-xl border border-slate-800 bg-gradient-to-br from-slate-900/50 to-slate-800/20 hover:border-blue-500/50 transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition">
-                <TrendingUp className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">Precios Dinámicos</h3>
-              <p className="text-slate-400">Cálculo automático basado en distancia, peso y tarifa actual.</p>
+            {/* Progress indicators */}
+            <div className="absolute bottom-4 sm:bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2 z-20">
+              {FEATURES.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentFeature(idx)}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    idx === currentFeature
+                      ? 'bg-cyan-500 w-8'
+                      : 'bg-cyan-500/30 w-2 hover:bg-cyan-500/50'
+                  }`}
+                />
+              ))}
             </div>
+          </div>
 
-            {/* Feature 3 */}
-            <div className="group p-8 rounded-xl border border-slate-800 bg-gradient-to-br from-slate-900/50 to-slate-800/20 hover:border-blue-500/50 transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">Seguridad Garantizada</h3>
-              <p className="text-slate-400">Autenticación de 2FA, auditoría completa de transacciones.</p>
-            </div>
-
-            {/* Feature 4 */}
-            <div className="group p-8 rounded-xl border border-slate-800 bg-gradient-to-br from-slate-900/50 to-slate-800/20 hover:border-blue-500/50 transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition">
-                <Zap className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">Instant Matching</h3>
-              <p className="text-slate-400">Conecta usuarios y choferes en segundos usando IA.</p>
-            </div>
-
-            {/* Feature 5 */}
-            <div className="group p-8 rounded-xl border border-slate-800 bg-gradient-to-br from-slate-900/50 to-slate-800/20 hover:border-blue-500/50 transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition">
-                <Users className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">Comunidad Confiable</h3>
-              <p className="text-slate-400">Sistema de ratings y reseñas verificadas.</p>
-            </div>
-
-            {/* Feature 6 */}
-            <div className="group p-8 rounded-xl border border-slate-800 bg-gradient-to-br from-slate-900/50 to-slate-800/20 hover:border-blue-500/50 transition-all duration-300">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition">
-                <Globe className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">Disponible 24/7</h3>
-              <p className="text-slate-400">Plataforma siempre activa con soporte inmediato.</p>
-            </div>
+          {/* Feature counter */}
+          <div className="text-center mt-8 sm:mt-10">
+            <p className="text-sm text-slate-400">
+              Cambia automáticamente cada 3 segundos
+            </p>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section id="pricing" className="relative py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="relative rounded-2xl border border-blue-500/30 bg-gradient-to-br from-blue-600/10 via-slate-900/50 to-cyan-600/10 p-12 md:p-16 overflow-hidden">
-            {/* Background glow */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-transparent to-cyan-500/20 blur-3xl" />
+      <section id="cta" className="relative py-16 sm:py-20 px-4 sm:px-6">
+        <div className="max-w-2xl mx-auto">
+          <div className="rounded-2xl border border-cyan-500/30 bg-gradient-to-br from-cyan-600/15 via-blue-950/40 to-green-600/10 p-8 sm:p-12 overflow-hidden relative">
+            {/* Animated background */}
+            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-transparent to-green-500/20 blur-3xl" />
 
-            <div className="relative z-10 text-center space-y-8">
-              <div className="space-y-4">
-                <h2 className="text-4xl md:text-5xl font-bold text-white">¿Listo para transformar tu logística?</h2>
-                <p className="text-xl text-slate-400 max-w-2xl mx-auto">
-                  Únete a cientos de usuarios que ya optimizan sus entregas con NEXVIA
+            <div className="relative z-10 text-center space-y-6">
+              <div className="space-y-3">
+                <h2 className="text-2xl sm:text-4xl font-bold text-white">
+                  ¿Listo para transformar?
+                </h2>
+                <p className="text-base sm:text-lg text-slate-300">
+                  Únete ahora y optimiza tus entregas
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
                 <Button
                   size="lg"
-                  className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white text-base"
+                  className="bg-gradient-to-r from-cyan-500 to-green-600 hover:from-cyan-600 hover:to-green-700 text-white w-full sm:w-auto"
                   onClick={() => navigate('/register')}
                 >
-                  Registrarse Gratis <ArrowRight className="ml-2 w-5 h-5" />
+                  Registrarse Gratis
                 </Button>
                 <Button
                   size="lg"
                   variant="outline"
-                  className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
+                  className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10 w-full sm:w-auto"
                   onClick={() => navigate('/login')}
                 >
-                  Tengo Cuenta
+                  Ya tengo cuenta
                 </Button>
               </div>
 
-              <p className="text-sm text-slate-500">
-                No se requiere tarjeta de crédito. Comienza en 2 minutos.
+              <p className="text-xs sm:text-sm text-slate-400">
+                Sin tarjeta de crédito • Comienza en 2 minutos
               </p>
             </div>
           </div>
@@ -250,61 +277,74 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-slate-800 bg-slate-950 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-          <div>
-            <h4 className="font-bold text-white mb-4">NEXVIA</h4>
-            <ul className="space-y-2 text-sm text-slate-400">
-              <li>
-                <a href="#" className="hover:text-white transition">
-                  Acerca de
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-white transition">
-                  Blog
-                </a>
-              </li>
-            </ul>
+      <footer className="border-t border-blue-900/50 bg-gradient-to-b from-gray-950 to-blue-950 py-8 sm:py-12 px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-8 mb-8">
+            <div>
+              <h4 className="font-bold text-white mb-3 text-sm">Producto</h4>
+              <ul className="space-y-2 text-xs sm:text-sm text-slate-400">
+                <li>
+                  <a href="#carousel" className="hover:text-cyan-400 transition">
+                    Características
+                  </a>
+                </li>
+                <li>
+                  <a href="#cta" className="hover:text-cyan-400 transition">
+                    Comenzar
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold text-white mb-3 text-sm">Legal</h4>
+              <ul className="space-y-2 text-xs sm:text-sm text-slate-400">
+                <li>
+                  <a href="#" className="hover:text-cyan-400 transition">
+                    Privacidad
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-cyan-400 transition">
+                    Términos
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold text-white mb-3 text-sm">Soporte</h4>
+              <ul className="space-y-2 text-xs sm:text-sm text-slate-400">
+                <li>
+                  <a href="#" className="hover:text-cyan-400 transition">
+                    Ayuda
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-cyan-400 transition">
+                    Contacto
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold text-white mb-3 text-sm">Social</h4>
+              <ul className="space-y-2 text-xs sm:text-sm text-slate-400">
+                <li>
+                  <a href="#" className="hover:text-cyan-400 transition">
+                    LinkedIn
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-cyan-400 transition">
+                    Twitter
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
-          <div>
-            <h4 className="font-bold text-white mb-4">Producto</h4>
-            <ul className="space-y-2 text-sm text-slate-400">
-              <li>
-                <a href="#features" className="hover:text-white transition">
-                  Features
-                </a>
-              </li>
-              <li>
-                <a href="#pricing" className="hover:text-white transition">
-                  Precios
-                </a>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-bold text-white mb-4">Legal</h4>
-            <ul className="space-y-2 text-sm text-slate-400">
-              <li>
-                <a href="#" className="hover:text-white transition">
-                  Privacidad
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-white transition">
-                  Términos
-                </a>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-bold text-white mb-4">Contacto</h4>
-            <p className="text-sm text-slate-400">support@nexvia.com</p>
-          </div>
-        </div>
 
-        <div className="border-t border-slate-800 pt-8 text-center text-sm text-slate-500">
-          <p>© 2026 NEXVIA. Todos los derechos reservados.</p>
+          <div className="border-t border-blue-900/50 pt-6 sm:pt-8 text-center text-xs sm:text-sm text-slate-500">
+            <p>© 2026 NEXVIA. Conectamos carga, impulsamos el futuro.</p>
+          </div>
         </div>
       </footer>
     </div>
