@@ -91,8 +91,9 @@ export const CancelTripSchema = z.object({
 export type CancelTripInput = z.infer<typeof CancelTripSchema>;
 
 export const GetAvailableTripsSchema = z.object({
-  page: z.number().int().min(1).default(1),
-  limit: z.number().int().min(1).max(50).default(10),
+  // z.coerce because query-string values arrive as strings.
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(10),
   estado: z.enum(['solicitado', 'aceptado', 'en_camino', 'completado', 'cancelado']).optional(),
 });
 
@@ -121,8 +122,8 @@ export const UpdateTruckSchema = z.object({
 export type UpdateTruckInput = z.infer<typeof UpdateTruckSchema>;
 
 export const GetAvailableTrucksSchema = z.object({
-  page: z.number().int().min(1).default(1),
-  limit: z.number().int().min(1).max(50).default(10),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(10),
 });
 
 export type GetAvailableTrucksInput = z.infer<typeof GetAvailableTrucksSchema>;
@@ -141,8 +142,8 @@ export type UpdateConfigInput = z.infer<typeof UpdateConfigSchema>;
 export const GetAuditLogSchema = z.object({
   user_id: z.string().uuid().optional(),
   action: z.string().optional(),
-  page: z.number().int().min(1).default(1),
-  limit: z.number().int().min(1).max(100).default(25),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
 });
 
 export type GetAuditLogInput = z.infer<typeof GetAuditLogSchema>;

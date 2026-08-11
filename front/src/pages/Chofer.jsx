@@ -50,7 +50,8 @@ export default function Chofer() {
         if (dist <= UMBRAL_LLEGADA_KM) {
           llegadaProcesandoRef.current = true;
           await nexvia.entities.Viaje.update(viaje.id, { estado: 'completado' });
-          await nexvia.entities.Camion.update(miCamion.id, { estado: 'disponible' });
+          // El backend (markCompleted) ya libera el camión a 'disponible'; reflejamos local.
+          setMiCamion((prev) => (prev ? { ...prev, estado: 'disponible' } : prev));
           llegadaProcesandoRef.current = false;
           setViajeActivo(null);
           cargarDatos();
@@ -181,7 +182,8 @@ export default function Chofer() {
         chofer_nombre: user?.full_name || miCamion.chofer_nombre,
         estado: 'aceptado',
       });
-      await nexvia.entities.Camion.update(miCamion.id, { estado: 'ocupado' });
+      // El backend (acceptTrip) ya marca el camión como 'ocupado'; reflejamos local.
+      setMiCamion((prev) => (prev ? { ...prev, estado: 'ocupado' } : prev));
       setSolicitudes((prev) => prev.filter((s) => s.id !== solicitud.id));
       const viajeActualizado = { ...solicitud, camion_id: miCamion.id, chofer_id: user.id, chofer_nombre: user?.full_name || miCamion.chofer_nombre, estado: 'aceptado' };
       setViajeActivo(viajeActualizado);
