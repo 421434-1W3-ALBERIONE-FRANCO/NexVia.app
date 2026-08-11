@@ -12,6 +12,20 @@ import {
 
 const router = Router();
 
+// POST /api/v1/camiones — Register my truck (chofer)
+router.post(
+  '/',
+  requireAuth,
+  requireRole('chofer'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const truck = await TruckService.create(req.user!.id, req.body);
+    res.status(201).json({
+      message: 'Truck registered successfully',
+      truck: TruckRepository.toResponse(truck),
+    });
+  })
+);
+
 // GET /api/v1/camiones/disponibles — Get available trucks
 router.get(
   '/disponibles',

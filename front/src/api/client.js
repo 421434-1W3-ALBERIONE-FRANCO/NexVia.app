@@ -99,9 +99,9 @@ const Camion = {
     const data = await api.get('/camiones/disponibles');
     return data.trucks || [];
   },
-  async create() {
-    // Backend has no truck-registration endpoint yet; surfaced for a future slice.
-    throw new Error('Registro de camión aún no disponible en el backend.');
+  async create(payload) {
+    const data = await api.post('/camiones', payload);
+    return data.truck;
   },
   async filter(criteria = {}) {
     if (criteria.user_id) {

@@ -132,6 +132,31 @@ export class TruckRepository {
     return parseInt(result.rows[0].count);
   }
 
+  static async create(userId: string, data: Partial<Truck>): Promise<Truck> {
+    const result = await query(
+      `INSERT INTO camiones
+         (user_id, patente, patente_acoplado, transporte_nombre, transporte_cuit,
+          chofer_nombre, chofer_cuit, telefono, capacidad_kg, lat, lng, estado)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+       RETURNING *`,
+      [
+        userId,
+        data.patente,
+        data.patente_acoplado ?? null,
+        data.transporte_nombre ?? null,
+        data.transporte_cuit ?? null,
+        data.chofer_nombre,
+        data.chofer_cuit ?? null,
+        data.telefono ?? null,
+        data.capacidad_kg ?? null,
+        data.lat ?? 0,
+        data.lng ?? 0,
+        data.estado ?? 'disponible',
+      ]
+    );
+    return result.rows[0];
+  }
+
   static toResponse(truck: Truck) {
     return {
       id: truck.id,

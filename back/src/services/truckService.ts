@@ -11,6 +11,20 @@ export class TruckService {
     return { trucks, total };
   }
 
+  static async create(userId: string, data: Partial<Truck>): Promise<Truck> {
+    // One truck per chofer: if they already registered one, return it (idempotent onboarding).
+    const existing = await TruckRepository.findByUserId(userId);
+    if (existing) {
+      return existing;
+    }
+    if (!data.patente) {
+      throw new AppError(400, 'Patente is required', 'PATENTE_REQUIRED');
+    }
+    const truck = await TruckRepository.create(userId, data);
+    await AuditService.log('create', 'camion', { userId, entityId: truck.id });
+    return truck;
+  }
+
   static async getMyTruck(choferId: string): Promise<Truck> {
     const truck = await TruckRepository.findByUserId(choferId);
     if (!truck) {
