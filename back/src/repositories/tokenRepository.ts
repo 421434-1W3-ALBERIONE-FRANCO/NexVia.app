@@ -11,9 +11,11 @@ export class EmailVerificationTokenRepository {
     return result.rows[0].id;
   }
 
-  static async findValid(userId: string): Promise<{ id: string; attempts: number } | null> {
+  static async findValid(
+    userId: string
+  ): Promise<{ id: string; attempts: number; code_hash: string } | null> {
     const result = await query(
-      `SELECT id, attempts
+      `SELECT id, attempts, code_hash
        FROM email_verification_tokens
        WHERE user_id = $1 AND is_used = FALSE AND expires_at > NOW()
        ORDER BY created_at DESC

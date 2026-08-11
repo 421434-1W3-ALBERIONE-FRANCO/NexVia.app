@@ -154,7 +154,7 @@ export default function Home() {
         destino_lat: destino.lat,
         destino_lng: destino.lng,
         distancia_km: distancia,
-        toneladas: tipoTarifa === 'por_tonelada' ? Number(toneladas) : 0,
+        toneladas: tipoTarifa === 'por_tonelada' ? Number(toneladas) : undefined,
         tipo_tarifa: tipoTarifa,
         precio: precio,
         carga: carga,

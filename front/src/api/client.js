@@ -134,7 +134,8 @@ const Camion = {
 
 const Configuracion = {
   async list() {
-    const data = await api.get('/admin/configuracion');
+    // Read via the public endpoint (any authenticated user); writes stay admin-only.
+    const data = await api.get('/config');
     return data.config ? [data.config] : [];
   },
   async update(_id, patch) {

@@ -13,6 +13,11 @@ const transporter = nodemailer.createTransport({
 
 export class EmailService {
   static async sendOTP(email: string, otp: string): Promise<boolean> {
+    // Dev convenience: surface the code in the server console when there is no
+    // real SMTP configured, so local testing doesn't depend on receiving email.
+    if (config.NODE_ENV !== 'production') {
+      console.log(`\n📧 [DEV] OTP for ${email}: ${otp}\n`);
+    }
     try {
       await transporter.sendMail({
         from: config.SMTP_FROM,

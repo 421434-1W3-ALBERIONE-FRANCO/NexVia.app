@@ -63,10 +63,10 @@ export class ConfigRepository {
     return {
       id: config.id,
       zona_nombre: config.zona_nombre,
-      centro_lat: config.centro_lat,
-      centro_lng: config.centro_lng,
-      tarifa_por_km: config.tarifa_por_km,
-      tarifa_por_tonelada: config.tarifa_por_tonelada,
+      centro_lat: Number(config.centro_lat),
+      centro_lng: Number(config.centro_lng),
+      tarifa_por_km: Number(config.tarifa_por_km),
+      tarifa_por_tonelada: Number(config.tarifa_por_tonelada),
       updated_at: config.updated_at,
     };
   }

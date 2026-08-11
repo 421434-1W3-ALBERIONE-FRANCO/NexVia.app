@@ -84,7 +84,7 @@ export class AuthService {
     }
 
     // Verify code
-    const isValid = TokenService.verifyOTP(code, token.id);
+    const isValid = TokenService.verifyOTP(code, token.code_hash);
     if (!isValid) {
       await EmailVerificationTokenRepository.incrementAttempts(token.id);
       throw new AppError(401, 'Invalid verification code', 'INVALID_CODE');

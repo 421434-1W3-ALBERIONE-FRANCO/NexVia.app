@@ -5,11 +5,13 @@ import { config } from './config/env';
 import { corsMiddleware } from './middleware/cors';
 import { errorHandler } from './middleware/errorHandler';
 import { apiRateLimit } from './middleware/rateLimit';
+import { authMiddleware } from './middleware/auth';
 import { initRedis } from './config/redis';
 import authRoutes from './routes/auth';
 import viajesRoutes from './routes/viajes';
 import camionesRoutes from './routes/camiones';
 import adminRoutes from './routes/admin';
+import configRoutes from './routes/config';
 
 const app = express();
 
@@ -32,6 +34,9 @@ app.use((req: Request, res: Response, next: Function) => {
   req.userAgent = req.headers['user-agent'];
   next();
 });
+
+// Soft auth: populate req.user from the session cookie when present
+app.use(authMiddleware);
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {
@@ -56,6 +61,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/viajes', viajesRoutes);
 app.use('/api/v1/camiones', camionesRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/config', configRoutes);
 
 // Rate limiting (general)
 app.use('/api/', apiRateLimit);

@@ -3,6 +3,9 @@ import { SessionService } from '../services/sessionService';
 import { UserRepository } from '../repositories/userRepository';
 import { AppError } from './errorHandler';
 
+// Soft authentication: if a valid session cookie is present, attach the user to
+// the request; otherwise continue unauthenticated. Applied globally so that
+// requireAuth/requireRole (which read req.user) work on every protected route.
 export async function authMiddleware(
   req: Request,
   res: Response,
@@ -10,23 +13,18 @@ export async function authMiddleware(
 ) {
   try {
     const sessionId = req.cookies?.[SessionService.getCookieName()];
-
     if (!sessionId) {
-      return next(new AppError(401, 'Not authenticated', 'NOT_AUTHENTICATED'));
+      return next();
     }
 
-    // Get session
     const session = await SessionService.getSession(sessionId);
-
     if (!session) {
-      return next(new AppError(401, 'Session expired or invalid', 'SESSION_INVALID'));
+      return next();
     }
 
-    // Get user
     const user = await UserRepository.findById(session.userId);
-
     if (!user || !user.is_active) {
-      return next(new AppError(401, 'User not found or inactive', 'USER_INACTIVE'));
+      return next();
     }
 
     // Attach to request

@@ -4,7 +4,7 @@ import { AuthService } from '../services/authService';
 import { SessionService } from '../services/sessionService';
 import { UserRepository } from '../repositories/userRepository';
 import { asyncHandler, AppError } from '../middleware/errorHandler';
-import { authMiddleware, requireAuth, requireRole } from '../middleware/auth';
+import { requireAuth, requireRole } from '../middleware/auth';
 import { loginRateLimit, registerRateLimit, passwordResetRateLimit } from '../middleware/rateLimit';
 import {
   RegisterSchema,
@@ -86,7 +86,7 @@ router.post(
 // GET CURRENT USER
 router.get(
   '/me',
-  authMiddleware,
+  requireAuth,
   asyncHandler(async (req: Request, res: Response) => {
     const user = await AuthService.getCurrentUser(req.user!.id);
 
@@ -103,7 +103,7 @@ router.get(
 // LOGOUT
 router.post(
   '/logout',
-  authMiddleware,
+  requireAuth,
   asyncHandler(async (req: Request, res: Response) => {
     await AuthService.logout(req.sessionId!, req.user!.id);
 
